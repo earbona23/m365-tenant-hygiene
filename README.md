@@ -1,5 +1,10 @@
 # m365-tenant-hygiene
 
+[![CI](https://github.com/earbona23/m365-tenant-hygiene/actions/workflows/ci.yml/badge.svg)](https://github.com/earbona23/m365-tenant-hygiene/actions/workflows/ci.yml)
+[![PowerShell 7.2+](https://img.shields.io/badge/PowerShell-7.2%2B-5391FE)](https://learn.microsoft.com/powershell/scripting/install/installing-powershell)
+[![Licence: MIT](https://img.shields.io/badge/Licence-MIT-blue.svg)](LICENSE)
+[![Read-only](https://img.shields.io/badge/Microsoft%20Graph-read--only-0f6e6e)](#read-only-by-construction)
+
 A read-only PowerShell module that audits the security hygiene of a Microsoft 365
 tenant over Microsoft Graph and produces a self-contained HTML report.
 
