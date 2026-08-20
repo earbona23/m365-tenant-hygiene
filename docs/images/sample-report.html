@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tenant hygiene report - Contoso Example Ltd</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --surface-alt: #fafbfc;
+  --ink: #10151d;
+  --muted: #5b6675;
+  --line: #e2e6eb;
+  --accent: #0f6e6e;
+  --sev-critical: #a81f14;
+  --sev-high: #b4530a;
+  --sev-medium: #8a6100;
+  --sev-low: #14539a;
+  --sev-informational: #5b6675;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117;
+    --surface: #151b23;
+    --surface-alt: #1b222b;
+    --ink: #e6edf3;
+    --muted: #93a0ae;
+    --line: #262e38;
+    --accent: #2dd4bf;
+    --sev-critical: #ff6b6b;
+    --sev-high: #ffa04d;
+    --sev-medium: #f2c744;
+    --sev-low: #6aa9f5;
+    --sev-informational: #93a0ae;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.6 ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+.mono { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; font-size: 0.9em; }
+
+/* Masthead */
+.masthead {
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  padding: 36px 0 28px;
+}
+.eyebrow {
+  margin: 0 0 6px;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 600;
+}
+.masthead h1 { margin: 0 0 20px; font-size: 30px; line-height: 1.2; font-weight: 650; letter-spacing: -0.02em; }
+dl.meta { display: flex; flex-wrap: wrap; gap: 8px 36px; margin: 0; }
+dl.meta div { min-width: 0; }
+dl.meta dt { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+dl.meta dd { margin: 2px 0 0; font-size: 14px; overflow-wrap: anywhere; }
+
+main { padding-bottom: 72px; }
+section { margin-top: 40px; }
+h2 { font-size: 19px; margin: 0 0 14px; font-weight: 650; letter-spacing: -0.01em; }
+h3 { font-size: 15px; margin: 32px 0 10px; font-weight: 650; }
+
+/* Incomplete-audit notice */
+.notice {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--sev-medium);
+  border-radius: var(--radius);
+  padding: 18px 22px;
+}
+.notice h2 { margin: 0 0 6px; font-size: 16px; color: var(--sev-medium); }
+.notice p { margin: 0 0 10px; color: var(--muted); }
+.notice ul { margin: 0; padding-left: 20px; }
+.notice li { margin-bottom: 8px; font-size: 14px; }
+
+/* Severity cards */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--sev-informational);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.card .count { font-size: 30px; font-weight: 650; line-height: 1.1; letter-spacing: -0.02em; }
+.card .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.card.sev-critical { border-top-color: var(--sev-critical); }
+.card.sev-critical .count { color: var(--sev-critical); }
+.card.sev-high { border-top-color: var(--sev-high); }
+.card.sev-high .count { color: var(--sev-high); }
+.card.sev-medium { border-top-color: var(--sev-medium); }
+.card.sev-medium .count { color: var(--sev-medium); }
+.card.sev-low { border-top-color: var(--sev-low); }
+.card.sev-low .count { color: var(--sev-low); }
+.card.neutral { border-top-color: var(--accent); }
+
+/* Coverage table */
+table.grid { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+table.grid th, table.grid td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--line); font-size: 14px; vertical-align: top; }
+table.grid thead th { background: var(--surface-alt); font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); font-weight: 600; }
+table.grid tbody tr:last-child td { border-bottom: 0; }
+table.grid .num { text-align: right; font-variant-numeric: tabular-nums; }
+table.grid .note { color: var(--muted); font-size: 13px; max-width: 420px; }
+
+.status { font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: 0.06em; padding: 2px 8px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+.status-completed { color: var(--accent); }
+.status-skipped { color: var(--sev-medium); }
+.status-failed { color: var(--sev-critical); }
+
+/* Filters */
+.filters { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-bottom: 8px; }
+.search { display: flex; flex-direction: column; gap: 4px; }
+.search span { font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
+.search input {
+  min-width: 260px; padding: 8px 12px; font: inherit; font-size: 14px;
+  color: var(--ink); background: var(--surface);
+  border: 1px solid var(--line); border-radius: 8px;
+}
+.search input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 11px; border-radius: 999px; cursor: pointer;
+  font-size: 12px; font-weight: 600;
+  border: 1px solid var(--line); background: var(--surface); color: var(--muted);
+  user-select: none;
+}
+.chip input { accent-color: currentColor; margin: 0; }
+.chip.sev-critical { color: var(--sev-critical); }
+.chip.sev-high { color: var(--sev-high); }
+.chip.sev-medium { color: var(--sev-medium); }
+.chip.sev-low { color: var(--sev-low); }
+.result-count { margin: 0; margin-left: auto; font-size: 13px; color: var(--muted); }
+
+.check-heading { display: flex; align-items: center; gap: 10px; }
+.badge { font-size: 12px; font-weight: 600; color: var(--muted); background: var(--surface-alt); border: 1px solid var(--line); border-radius: 999px; padding: 1px 9px; }
+
+/* Findings */
+.finding {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--sev-informational);
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+}
+.finding.sev-critical { border-left-color: var(--sev-critical); }
+.finding.sev-high { border-left-color: var(--sev-high); }
+.finding.sev-medium { border-left-color: var(--sev-medium); }
+.finding.sev-low { border-left-color: var(--sev-low); }
+.finding[hidden] { display: none; }
+.finding > summary {
+  cursor: pointer; padding: 12px 16px; display: flex; flex-wrap: wrap;
+  align-items: center; gap: 10px; list-style: none;
+}
+.finding > summary::-webkit-details-marker { display: none; }
+.finding > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius); }
+.pill { font-size: 10px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; padding: 3px 8px; border-radius: 4px; border: 1px solid currentColor; white-space: nowrap; }
+.pill.sev-critical { color: var(--sev-critical); }
+.pill.sev-high { color: var(--sev-high); }
+.pill.sev-medium { color: var(--sev-medium); }
+.pill.sev-low { color: var(--sev-low); }
+.pill.sev-informational { color: var(--sev-informational); }
+.object { font-weight: 600; overflow-wrap: anywhere; }
+.headline { color: var(--muted); font-size: 14px; }
+.finding .body { padding: 0 16px 16px 16px; border-top: 1px solid var(--line); }
+.detail { margin: 14px 0 0; }
+.recommendation { margin: 12px 0 0; padding: 12px 14px; background: var(--surface-alt); border-radius: 8px; font-size: 14px; }
+.recommendation strong { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--accent); margin-bottom: 4px; }
+dl.facts { display: flex; flex-wrap: wrap; gap: 6px 28px; margin: 14px 0 0; }
+dl.facts dt { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+dl.facts dd { margin: 1px 0 0; font-size: 13px; overflow-wrap: anywhere; }
+.evidence-label { margin: 16px 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
+pre.evidence {
+  margin: 0; padding: 12px 14px; overflow-x: auto;
+  background: var(--surface-alt); border: 1px solid var(--line); border-radius: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; line-height: 1.5;
+}
+.reference { margin: 12px 0 0; font-size: 13px; }
+.reference a { color: var(--accent); }
+.empty { color: var(--muted); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 22px; margin: 0; }
+
+footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+footer p { margin: 0 0 4px; }
+
+@media print {
+  :root { --bg: #fff; --surface: #fff; --surface-alt: #fff; --ink: #000; --line: #bbb; }
+  body { font-size: 11pt; }
+  .no-print { display: none !important; }
+  .masthead { padding: 0 0 16px; }
+  .finding { break-inside: avoid; page-break-inside: avoid; }
+  .finding > .body { display: block !important; }
+  a { text-decoration: none; color: inherit; }
+}
+</style>
+</head>
+<body>
+<header class="masthead">
+  <div class="wrap">
+    <p class="eyebrow">Microsoft 365 tenant hygiene</p>
+    <h1>Contoso Example Ltd</h1>
+    <dl class="meta">
+      <div><dt>Generated</dt><dd>2026-03-14 09:41:00 UTC</dd></div>
+      <div><dt>Tenant ID</dt><dd class='mono'>00000000-0000-4000-b000-0000000000ff</dd></div>
+      <div><dt>Signed in as</dt><dd>security.reader@contoso.example</dd></div>
+      <div><dt>Duration</dt><dd>21 s</dd></div>
+      <div><dt>Module</dt><dd>M365TenantHygiene 1.0.0</dd></div>
+    </dl>
+  </div>
+</header>
+<main class="wrap">
+<section class="notice" role="alert">
+  <h2>This audit is incomplete</h2>
+  <p>1 of 6 checks did not run. The findings below cover only the checks that did. Treat a low count as unproven, not as clean.</p>
+  <ul>
+    <li><strong>Inbox rules forwarding outside the tenant</strong> &mdash; <span class='status status-skipped'>Skipped</span> Microsoft Graph refused access to all 296 mailbox(es) tried. With delegated permissions the module can only read mailboxes the signed-in user can already open; an administrative role does not by itself grant mailbox access. No conclusion about external forwarding can be drawn from this run.</li>
+  </ul>
+</section>
+<section class="cards" aria-label="Findings by severity">
+  <div class='card sev-critical'><span class='count'>3</span><span class='label'>Critical</span></div>
+  <div class='card sev-high'><span class='count'>5</span><span class='label'>High</span></div>
+  <div class='card sev-medium'><span class='count'>5</span><span class='label'>Medium</span></div>
+  <div class='card sev-low'><span class='count'>1</span><span class='label'>Low</span></div>
+  <div class='card sev-informational'><span class='count'>1</span><span class='label'>Informational</span></div>
+  <div class='card neutral'><span class='count'>892</span><span class='label'>Objects examined</span></div>
+</section>
+<section>
+  <h2>Coverage</h2>
+  <table class="grid">
+    <thead><tr><th>Check</th><th>Category</th><th>Status</th><th class="num">Objects</th><th class="num">Findings</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Privileged role assignments</td>
+        <td>Privileged access</td>
+        <td><span class='status status-completed'>Completed</span></td>
+        <td class='num'>41</td>
+        <td class='num'>4</td>
+        <td class='note'></td>
+      </tr>
+      <tr>
+        <td>Users without MFA</td>
+        <td>Identity</td>
+        <td><span class='status status-completed'>Completed</span></td>
+        <td class='num'>318</td>
+        <td class='num'>3</td>
+        <td class='note'></td>
+      </tr>
+      <tr>
+        <td>Inactive accounts</td>
+        <td>Identity</td>
+        <td><span class='status status-completed'>Completed</span></td>
+        <td class='num'>296</td>
+        <td class='num'>2</td>
+        <td class='note'></td>
+      </tr>
+      <tr>
+        <td>Applications with high-risk permissions</td>
+        <td>Applications</td>
+        <td><span class='status status-completed'>Completed</span></td>
+        <td class='num'>63</td>
+        <td class='num'>3</td>
+        <td class='note'></td>
+      </tr>
+      <tr>
+        <td>Inbox rules forwarding outside the tenant</td>
+        <td>Exchange Online</td>
+        <td><span class='status status-skipped'>Skipped</span></td>
+        <td class='num'>0</td>
+        <td class='num'>0</td>
+        <td class='note'>Microsoft Graph refused access to all 296 mailbox(es) tried. With delegated permissions the module can only read mailboxes the signed-in user can already open; an administrative role does not by itself grant mailbox access. No conclusion about external forwarding can be drawn from this run.</td>
+      </tr>
+      <tr>
+        <td>Non-compliant Intune devices</td>
+        <td>Devices</td>
+        <td><span class='status status-completed'>Completed</span></td>
+        <td class='num'>174</td>
+        <td class='num'>3</td>
+        <td class='note'></td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+<section>
+  <h2>Findings</h2>
+  <div class="filters no-print">
+    <label class="search"><span>Filter</span><input type="search" id="q" placeholder="user, device, application, rule..." autocomplete="off"></label>
+    <div class="chips" id="sev-filters">
+      <label class='chip sev-critical'><input type='checkbox' value='critical' checked> Critical</label>
+      <label class='chip sev-high'><input type='checkbox' value='high' checked> High</label>
+      <label class='chip sev-medium'><input type='checkbox' value='medium' checked> Medium</label>
+      <label class='chip sev-low'><input type='checkbox' value='low' checked> Low</label>
+      <label class='chip sev-informational'><input type='checkbox' value='informational' checked> Informational</label>
+    </div>
+    <p class="result-count" id="shown"></p>
+  </div>
+  <h3 class='check-heading'>Applications with high-risk permissions <span class='badge'>3</span></h3>
+  <details class='finding sev-critical' data-severity='critical' data-search='legacy reporting connector application can escalate its own privileges this application holds directory.readwrite.all, approleassignment.readwrite.all as an application permission. permissions in this group let the holder assign roles or credentials, so whoever controls this application&#39;s secret can make themselves a global administrator without ever signing in as a user. the application is published by another tenant, so the credential that uses this grant is held outside your organisation. 00000000-0000-4000-c000-000000000201 applications'>
+    <summary>
+      <span class='pill sev-critical'>Critical</span>
+      <span class='object'>Legacy Reporting Connector</span>
+      <span class='headline'>Application can escalate its own privileges</span>
+    </summary>
+    <div class="body">
+      <p class='detail'>This application holds Directory.ReadWrite.All, AppRoleAssignment.ReadWrite.All as an application permission. Permissions in this group let the holder assign roles or credentials, so whoever controls this application&#39;s secret can make themselves a Global Administrator without ever signing in as a user. The application is published by another tenant, so the credential that uses this grant is held outside your organisation.</p>
+      <p class='recommendation'><strong>What to do</strong> Identify the workload behind this application and confirm it needs tenant-wide access. Where it does not, replace the grant with a narrower permission. Remove grants belonging to applications nobody can account for.</p>
+      <dl class="facts">
+        <div><dt>Object type</dt><dd>ServicePrincipal</dd></div>
+        <div><dt>Object ID</dt><dd class='mono'>00000000-0000-4000-c000-000000000201</dd></div>
+        <div><dt>Category</dt><dd>Applications</dd></div>
+      </dl>
+      <p class="evidence-label">Evidence</p>
+      <pre class='evidence'>{
+  &quot;accountEnabled&quot;: true,
+  &quot;escalationPermissions&quot;: [
+    &quot;AppRoleAssignment.ReadWrite.All&quot;,
+    &quot;Directory.ReadWrite.All&quot;
+  ],
+  &quot;grantType&quot;: &quot;Application permission (app role)&quot;,
+  &quot;permissions&quot;: [
+    &quot;AppRoleAssignment.ReadWrite.All&quot;,
+    &quot;Directory.ReadWrite.All&quot;,
+    &quot;User.Read.All&quot;
+  ],
+  &quot;publishedExternally&quot;: true,
+  &quot;resource&quot;: &quot;Microsoft Graph&quot;
+}</pre>
+      <p class='reference'><a href='https://learn.microsoft.com/entra/identity-platform/permissions-consent-overview' rel='noreferrer noopener' target='_blank'>Microsoft documentation</a></p>
+    </div>
+  </details>
+  <details class='finding sev-high' data-severity='high' data-search='invoice archiver application has tenant-wide access to organisation data this application holds mail.readwrite, files.readwrite.all as an application permission. application permissions are not scoped to a user and are not subject to mfa, so this grant covers every mailbox, site or file in the tenant, permanently. 00000000-0000-4000-c000-000000000202 applications'>
+    <summary>
+      <span class='pill sev-high'>High</span>
+      <span class='object'>Invoice Archiver</span>
+      <span class='headline'>Application has tenant-wide access to organisation data</span>
+    </summary>
+    <div class="body">
+      <p class='detail'>This application holds Mail.ReadWrite, Files.ReadWrite.All as an application permission. Application permissions are not scoped to a user and are not subject to MFA, so this grant covers every mailbox, site or file in the tenant, permanently.</p>
+      <p class='recommendation'><strong>What to do</strong> Scope mail and file access with an application access policy so the application only reaches the mailboxes it needs.</p>
+      <dl class="facts">
+        <div><dt>Object type</dt><dd>ServicePrincipal</dd></div>
+        <div><dt>Object ID</dt><dd class='mono'>00000000-0000-4000-c000-000000000202</dd></div>
+        <div><dt>Category</dt><dd>Applications</dd></div>
+      </dl>
+      <p class="evidence-label">Evidence</p>
+      <pre class='evidence'>{
+  &quot;accountEnabled&quot;: true,
+  &quot;bulkDataPermissions&quot;: [
+    &quot;Files.ReadWrite.All&quot;,
+    &quot;Mail.ReadWrite&quot;
+  ],
+  &quot;grantType&quot;: &quot;Application permission (app role)&quot;,
+  &quot;permissions&quot;: [
+    &quot;Files.ReadWrite.All&quot;,
+    &quot;Mail.ReadWrite&quot;
+  ],
+  &quot;publishedExternally&quot;: false,
+  &quot;resource&quot;: &quot;Microsoft Graph&quot;
+}</pre>
+      <p class='reference'><a href='https://learn.microsoft.com/entra/identity-platform/permissions-consent-overview' rel='noreferrer noopener' target='_blank'>Microsoft documentation</a></p>
+    </div>
+  </details>
+  <details class='finding sev-medium' data-severity='medium' data-search='team productivity add-in sensitive delegated permission granted for all users an administrator consented to files.read.all, sites.read.all on microsoft graph for every user in the tenant. any user of this application acts with these permissions without being asked, so the grant is only as trustworthy as the application itself. 00000000-0000-4000-c000-000000000203 applications'>
+    <summary>
+      <span class='pill sev-medium'>Medium</span>
+      <span class='object'>Team Productivity Add-in</span>
+      <span class='headline'>Sensitive delegated permission granted for all users</span>
+    </summary>
+    <div class="body">
+      <p class='detail'>An administrator consented to Files.Read.All, Sites.Read.All on Microsoft Graph for every user in the tenant. Any user of this application acts with these permissions without being asked, so the grant is only as trustworthy as the application itself.</p>
+      <p class='recommendation'><strong>What to do</strong> Confirm the application is one your organisation deliberately adopted. Where tenant-wide consent is not required, revoke it and restrict the app to an assigned group.</p>
+      <dl class="facts">
+        <div><dt>Object type</dt><dd>ServicePrincipal</dd></div>
+        <div><dt>Object ID</dt><dd class='mono'>00000000-0000-4000-c000-000000000203</dd></div>
+        <div><dt>Category</dt><dd>Applications</dd></div>
+      </dl>
+      <p class="evidence-label">Evidence</p>
+      <pre class='evidence'>{
+  &quot;grantType&quot;: &quot;Delegated permission (AllPrincipals)&quot;,
+  &quot;resource&quot;: &quot;Microsoft Graph&quot;,
+  &quot;riskyScopes&quot;: [
+    &quot;Files.Read.All&quot;,
+    &quot;Sites.Read.All&quot;
+  ],
+  &quot;scopes&quot;: [
+    &quot;Files.Read.All&quot;,
+    &quot;Sites.Read.All&quot;,
+    &quot;User.Read&quot;,
+    &quot;offline_access&quot;
+  ]
+}</pre>
+      <p class='reference'><a href='https://learn.microsoft.com/entra/identity/enterprise-apps/manage-consent-requests' rel='noreferrer noopener' target='_blank'>Microsoft documentation</a></p>
+    </div>
+  </details>
+  <h3 class='check-heading'>Privileged role assignments <span class='badge'>4</span></h3>
+  <details class='finding sev-critical' data-severity='critical' data-search='consultant_msp.example#ext#@contoso.example guest account holds the global administrator role an account external to this tenant holds global administrator. guest identities are governed by another organisation&#39;s password, mfa and offboarding processes, none of which this tenant controls. 00000000-0000-4000-a000-000000000106 privileged access'>
+    <summary>
+      <span class='pill sev-critical'>Critical</span>
+      <span class='object'>consultant_msp.example#EXT#@contoso.example</span>
+      <span class='headline'>Guest account holds the Global Administrator role</span>
+    </summary>
+    <div class="body">
+      <p class='detail'>An account external to this tenant holds Global Administrator. Guest identities are governed by another organisation&#39;s password, MFA and offboarding processes, none of which this tenant controls.</p>
+      <p class='recommendation'><strong>What to do</strong> Remove the role from the guest account. Where an external party genuinely needs administrative access, issue them an internal account subject to this tenant&#39;s Conditional Access and lifecycle controls.</p>
+      <dl class="facts">
+        <div><dt>Object type</dt><dd>user</dd></div>
+        <div><dt>Object ID</dt><dd class='mono'>00000000-0000-4000-a000-000000000106</dd></div>
+        <div><dt>Category</dt><dd>Privileged access</dd></div>
+      </dl>
+      <p class="evidence-label">Evidence</p>
+      <pre class='evidence'>{
+  &quot;accountEnabled&quot;: true,
+  &quot;directoryScopeId&quot;: &quot;/&quot;,
+  &quot;principalType&quot;: &quot;user&quot;,
+  &quot;roleName&quot;: &quot;Global Administrator&quot;,
+  &quot;roleTier&quot;: &quot;Tier0&quot;,
+  &quot;userType&quot;: &quot;Guest&quot;
+}</pre>
+      <p class='reference'><a href='https://learn.microsoft.com/entra/identity/role-based-access-control/best-practices' rel='noreferrer noopener' target='_blank'>Microsoft documentation</a></p>
+    </div>
+  </details>
+  <details class='finding sev-high' data-severity='high' data-search='contoso example ltd 7 principals hold global administrator microsoft&#39;s guidance is to keep the number of permanent global administrators small -- commonly no more than 4. every additional holder is another account whose compromise is a full tenant compromise. 00000000-0000-4000-b000-0000000000ff privileged access'>
+    <summary>
+      <span class='pill sev-high'>High</span>
+      <span class='object'>Contoso Example Ltd</span>
+      <span class='headline'>7 principals hold Global Administrator</span>
+    </summary>
+    <div class="body">
+      <p class='detail'>Microsoft&#39;s guidance is to keep the number of permanent Global Administrators small -- commonly no more than 4. Every additional holder is another account whose compromise is a full tenant compromise.</p>
+      <p class='recommendation'><strong>What to do</strong> Move day-to-day work onto the least-privileged role that covers it, and make the remaining Global Administrator access eligible rather than permanent through Privileged Identity Management.</p>
+      <dl class="facts">
+        <div><dt>Object type</dt><dd>Tenant</dd></div>
+        <div><dt>Object ID</dt><dd class='mono'>00000000-0000-4000-b000-0000000000ff</dd></div>
+        <div><dt>Category</dt><dd>Privileged access</dd></div>
+      </dl>
+      <p class="evidence-label">Evidence</p>
+      <pre class='evidence'>{
+  &quot;globalAdministratorCount&quot;: 7,
+  &quot;holders&quot;: [
+    &quot;Dana Whitfield&quot;,
+    &quot;Petros Stavros&quot;,
+    &quot;Rita Okonkwo (Partner)&quot;,
+    &quot;break-glass-01&quot;,
+    &quot;break-glass-02&quot;,
+    &quot;IT Automation&quot;,
+    &quot;Legacy Migration Account&quot;
+  ],
+  &quot;threshold&quot;: 4
+}</pre>
+      <p class='reference'><a href='https://learn.microsoft.com/entra/identity/role-based-access-control/best-practices' rel='noreferrer noopener' target='_blank'>Microsoft documentation</a></p>
+    </div>
+  </details>
+  <details class='finding sev-medium' data-severity='medium' data-search='j.laurent@contoso.example disabled account still holds the exchange administrator role the account is disabled but the exchange administrator assignment remains. re-enabling the account -- during an offboarding reversal, a migration, or an attack -- restores administrative access with it. 00000000-0000-4000-a000-000000000107 privileged access'>
+    <summary>
+      <span class='pill sev-medium'>Medium</span>
+      <span class='object'>j.laurent@contoso.example</span>
+      <span class='headline'>Disabled account still holds the Exchange Administrator role</span>
+    </summary>
+    <div class="body">
+      <p class='detail'>The account is disabled but the Exchange Administrator assignment remains. Re-enabling the account -- during an offboarding reversal, a migration, or an attack -- restores administrative access with it.</p>
+      <p class='recommendation'><strong>What to do</strong> Remove role assignments as part of offboarding rather than relying on the account being disabled.</p>
+      <dl class="facts">
+        <div><dt>Object type</dt><dd>user</dd></div>
+        <div><dt>Object ID</dt><dd class='mono'>00000000-0000-4000-a000-000000000107</dd></div>
+        <div><dt>Category</dt><dd>Privileged access</dd></div>
+      </dl>
+      <p class="evidence-label">Evidence</p>
+      <pre class='evidence'>{
+  &quot;accountEnabled&quot;: false,
+  &quot;directoryScopeId&quot;: &quot;/&quot;,
+  &quot;principalType&quot;: &quot;user&quot;,
+  &quot;roleName&quot;: &quot;Exchange Administrator&quot;,
+  &quot;roleTier&quot;: &quot;Tier1&quot;
+}</pre>
+      <p class='reference'><a href='https://learn.microsoft.com/entra/identity/role-based-access-control/best-practices' rel='noreferrer noopener' target='_blank'>Microsoft documentation</a></p>
+    </div>
+  </details>
+  <details class='finding sev-informational' data-severity='informational' data-search='break-glass-01@contoso.example global administrator assignment break-glass-01@contoso.example holds global administrator. entire directory. 00000000-0000-4000-a000-000000000108 privileged access'>
+    <summary>
+      <span class='pill sev-informational'>Informational</span>
+      <span class='object'>break-glass-01@contoso.example</span>
+      <span class='headline'>Global Administrator assignment</span>
+    </summary>
+    <div class="body">
+      <p class='detail'>break-glass-01@contoso.example holds Global Administrator. Entire directory.</p>
+      <p class='recommendation'><strong>What to do</strong> Confirm this assignment is still required and that the account is protected by phishing-resistant MFA.</p>
+      <dl class="facts">
+        <div><dt>Object type</dt><dd>user</dd></div>
+        <div><dt>Object ID</dt><dd class='mono'>00000000-0000-4000-a000-000000000108</dd></div>
+        <div><dt>Category</dt><dd>Privileged access</dd></div>
+      </dl>
+      <p class="evidence-label">Evidence</p>
+      <pre class='evidence'>{
+  &quot;accountEnabled&quot;: true,
+  &quot;directoryScopeId&quot;: &quot;/&quot;,
+  &quot;principalType&quot;: &quot;user&quot;,
+  &quot;roleName&quot;: &quot;Global Administrator&quot;,
+  &quot;roleTier&quot;: &quot;Tier0&quot;,
+  &quot;userType&quot;: &quot;Member&quot;
+}</pre>
+      <p class='reference'><a href='https://learn.microsoft.com/entra/identity/role-based-access-control/best-practices' rel='noreferrer noopener' target='_blank'>Microsoft documentation</a></p>
+    </div>
+  </details>
+  <h3 class='check-heading'>Users without MFA <span class='badge'>3</span></h3>
+  <details class='finding sev-critical' data-severity='critical' data-search='dana.whitfield@contoso.example account is not capable of multi-factor authentication the account has no registered multi-factor authentication method. this account holds at least one administrative role, so a single stolen password is enough to reach tenant administration. 00000000-0000-4000-a000-000000000101 identity'>
+    <summary>
+      <span class='pill sev-critical'>Critical</span>
+      <span class='object'>dana.whitfield@contoso.example</span>
+      <span class='headline'>Account is not capable of multi-factor authentication</span>
+    </summary>
+    <div class="body">
+      <p class='detail'>The account has no registered multi-factor authentication method. This account holds at least one administrative role, so a single stolen password is enough to reach tenant administration.</p>
+      <p class='recommendation'><strong>What to do</strong> Require MFA registration through a Conditional Access policy, then confirm the user completes registration. For administrators, treat this as an immediate action.</p>
+      <dl class="facts">
+        <div><dt>Object type</dt><dd>User</dd></div>
+        <div><dt>Object ID</dt><dd class='mono'>00000000-0000-4000-a000-000000000101</dd></div>
+        <div><dt>Category</dt><dd>Identity</dd></div>
+      </dl>
+      <p class="evidence-label">Evidence</p>
+      <pre class='evidence'>{
+  &quot;defaultMfaMethod&quot;: null,
+  &quot;displayName&quot;: &quot;Dana Whitfield&quot;,
+  &quot;isAdmin&quot;: true,
+  &quot;isMfaCapable&quot;: false,
+  &quot;isMfaRegistered&quot;: false,
+  &quot;lastUpdated&quot;: &quot;2026-03-11T22:04:00Z&quot;,
+  &quot;methodsRegistered&quot;: [],
+  &quot;userType&quot;: &quot;Member&quot;
+}</pre>
+      <p class='reference'><a href='https://learn.microsoft.com/entra/identity/authentication/howto-mfa-getstarted' rel='noreferrer noopener' target='_blank'>Microsoft documentation</a></p>
+    </div>
+  </details>
+  <details class='finding sev-high' data-severity='high' data-search='operations.scanner@contoso.example account is not capable of multi-factor authentication the account has a registered method, but none of the registered methods can currently satisfy an mfa challenge. 00000000-0000-4000-a000-000000000102 identity'>
+    <summary>
+      <span class='pill sev-high'>High</span>
+      <span class='object'>operations.scanner@contoso.example</span>
+      <span class='headline'>Account is not capable of multi-factor authentication</span>
+    </summary>
+    <div class="body">
+      <p class='detail'>The account has a registered method, but none of the registered methods can currently satisfy an MFA challenge.</p>
+      <p class='recommendation'><strong>What to do</strong> Require MFA registration through a Conditional Access policy, then confirm the user completes registration.</p>
+      <dl class="facts">
+        <div><dt>Object type</dt><dd>User</dd></div>
+        <div><dt>Object ID</dt><dd class='mono'>00000000-0000-4000-a000-000000000102</dd></div>
+        <div><dt>Category</dt><dd>Identity</dd></div>
+      </dl>
+      <p class="evidence-label">Evidence</p>
+      <pre class='evidence'>{
+  &quot;defaultMfaMethod&quot;: &quot;none&quot;,
+  &quot;displayName&quot;: &quot;Operations Scanner&quot;,
+  &quot;isAdmin&quot;: false,
+  &quot;isMfaCapable&quot;: false,
+  &quot;isMfaRegistered&quot;: true,
+  &quot;lastUpdated&quot;: &quot;2025-08-02T11:19:00Z&quot;,
+  &quot;methodsRegistered&quot;: [
+    &quot;mobilePhone&quot;
+  ],
+  &quot;userType&quot;: &quot;Member&quot;
+}</pre>
+      <p class='reference'><a href='https://learn.microsoft.com/entra/identity/authentication/howto-mfa-getstarted' rel='noreferrer noopener' target='_blank'>Microsoft documentation</a></p>
+    </div>
+  </details>
+  <details class='finding sev-medium' data-severity='medium' data-search='r.okonkwo_partner.example#ext#@contoso.example account is not capable of multi-factor authentication the account has no registered multi-factor authentication method. 00000000-0000-4000-a000-000000000103 identity'>
+    <summary>
+      <span class='pill sev-medium'>Medium</span>
+      <span class='object'>r.okonkwo_partner.example#EXT#@contoso.example</span>
+      <span class='headline'>Account is not capable of multi-factor authentication</span>
+    </summary>
+    <div class="body">
+      <p class='detail'>The account has no registered multi-factor authentication method.</p>
+      <p class='recommendation'><strong>What to do</strong> Require MFA registration through a Conditional Access policy, then confirm the user completes registration.</p>
+      <dl class="facts">
+        <div><dt>Object type</dt><dd>User</dd></div>
+        <div><dt>Object ID</dt><dd class='mono'>00000000-0000-4000-a000-000000000103</dd></div>
+        <div><dt>Category</dt><dd>Identity</dd></div>
+      </dl>
+      <p class="evidence-label">Evidence</p>
+      <pre class='evidence'>{
+  &quot;displayName&quot;: &quot;Rita Okonkwo (Partner)&quot;,
+  &quot;isAdmin&quot;: false,
+  &quot;isMfaCapable&quot;: false,
+  &quot;isMfaRegistered&quot;: false,
+  &quot;methodsRegistered&quot;: [],
+  &quot;userType&quot;: &quot;Guest&quot;
+}</pre>
+      <p class='reference'><a href='https://learn.microsoft.com/entra/identity/authentication/howto-mfa-getstarted' rel='noreferrer noopener' target='_blank'>Microsoft documentation</a></p>
+    </div>
+  </details>
+  <h3 class='check-heading'>Inactive accounts <span class='badge'>2</span></h3>
+  <details class='finding sev-high' data-severity='high' data-search='p.stavros@contoso.example enabled account is inactive last sign-in was 214 day(s) ago, beyond the 90 day threshold. the account also holds a privileged directory role, which makes a dormant account a standing administrative foothold. 00000000-0000-4000-a000-000000000104 identity'>
+    <summary>
+      <span class='pill sev-high'>High</span>
+      <span class='object'>p.stavros@contoso.example</span>
+      <span class='headline'>Enabled account is inactive</span>
+    </summary>
+    <div class="body">
+      <p class='detail'>Last sign-in was 214 day(s) ago, beyond the 90 day threshold. The account also holds a privileged directory role, which makes a dormant account a standing administrative foothold.</p>
+      <p class='recommendation'><strong>What to do</strong> Confirm the account is still needed. If it is not, disable it, reclaim the licence, and delete it once the retention period allows.</p>
+      <dl class="facts">
+        <div><dt>Object type</dt><dd>User</dd></div>
+        <div><dt>Object ID</dt><dd class='mono'>00000000-0000-4000-a000-000000000104</dd></div>
+        <div><dt>Category</dt><dd>Identity</dd></div>
+      </dl>
+      <p class="evidence-label">Evidence</p>
+      <pre class='evidence'>{
+  &quot;daysIdle&quot;: 214,
+  &quot;displayName&quot;: &quot;Petros Stavros&quot;,
+  &quot;lastSignInUtc&quot;: &quot;2025-08-12T07:55:00.0000000Z&quot;,
+  &quot;licenseCount&quot;: 2,
+  &quot;licensed&quot;: true,
+  &quot;privileged&quot;: true,
+  &quot;thresholdDays&quot;: 90,
+  &quot;userType&quot;: &quot;Member&quot;
+}</pre>
+      <p class='reference'><a href='https://learn.microsoft.com/entra/identity/monitoring-health/howto-manage-inactive-user-accounts' rel='noreferrer noopener' target='_blank'>Microsoft documentation</a></p>
+    </div>
+  </details>
+  <details class='finding sev-medium' data-severity='medium' data-search='temp.contractor03@contoso.example enabled account has never signed in no interactive sign-in has ever been recorded, and the account was created 402 day(s) ago. 00000000-0000-4000-a000-000000000105 identity'>
+    <summary>
+      <span class='pill sev-medium'>Medium</span>
+      <span class='object'>temp.contractor03@contoso.example</span>
+      <span class='headline'>Enabled account has never signed in</span>
+    </summary>
+    <div class="body">
+      <p class='detail'>No interactive sign-in has ever been recorded, and the account was created 402 day(s) ago.</p>
+      <p class='recommendation'><strong>What to do</strong> Confirm the account is still needed. If it is not, disable it and reclaim the licence.</p>
+      <dl class="facts">
+        <div><dt>Object type</dt><dd>User</dd></div>
+        <div><dt>Object ID</dt><dd class='mono'>00000000-0000-4000-a000-000000000105</dd></div>
+        <div><dt>Category</dt><dd>Identity</dd></div>
+      </dl>
+      <p class="evidence-label">Evidence</p>
+      <pre class='evidence'>{
+  &quot;createdDateTime&quot;: &quot;2025-02-05T14:00:00Z&quot;,
+  &quot;daysIdle&quot;: 402,
+  &quot;displayName&quot;: &quot;Temporary Contractor 03&quot;,
+  &quot;licenseCount&quot;: 1,
+  &quot;licensed&quot;: true,
+  &quot;privileged&quot;: false,
+  &quot;thresholdDays&quot;: 90,
+  &quot;userType&quot;: &quot;Member&quot;
+}</pre>
+      <p class='reference'><a href='https://learn.microsoft.com/entra/identity/monitoring-health/howto-manage-inactive-user-accounts' rel='noreferrer noopener' target='_blank'>Microsoft documentation</a></p>
+    </div>
+  </details>
+  <h3 class='check-heading'>Non-compliant Intune devices <span class='badge'>3</span></h3>
+  <details class='finding sev-high' data-severity='high' data-search='cts-laptop-0417 device is non-compliant the device failed the compliance policies targeting it. if a conditional access policy requires a compliant device, this device is being blocked; if no such policy exists, it is reaching corporate data while failing your own baseline. 00000000-0000-4000-d000-000000000301 devices'>
+    <summary>
+      <span class='pill sev-high'>High</span>
+      <span class='object'>CTS-LAPTOP-0417</span>
+      <span class='headline'>Device is non-compliant</span>
+    </summary>
+    <div class="body">
+      <p class='detail'>The device failed the compliance policies targeting it. If a Conditional Access policy requires a compliant device, this device is being blocked; if no such policy exists, it is reaching corporate data while failing your own baseline.</p>
+      <p class='recommendation'><strong>What to do</strong> Open the device in Intune to see which settings failed, and fix the setting rather than the compliance policy.</p>
+      <dl class="facts">
+        <div><dt>Object type</dt><dd>Device</dd></div>
+        <div><dt>Object ID</dt><dd class='mono'>00000000-0000-4000-d000-000000000301</dd></div>
+        <div><dt>Category</dt><dd>Devices</dd></div>
+      </dl>
+      <p class="evidence-label">Evidence</p>
+      <pre class='evidence'>{
+  &quot;assignedUser&quot;: &quot;p.stavros@contoso.example&quot;,
+  &quot;complianceState&quot;: &quot;noncompliant&quot;,
+  &quot;daysSinceSync&quot;: 2,
+  &quot;isEncrypted&quot;: false,
+  &quot;manufacturer&quot;: &quot;Contoso Devices&quot;,
+  &quot;model&quot;: &quot;Pro 14&quot;,
+  &quot;operatingSystem&quot;: &quot;Windows&quot;,
+  &quot;osVersion&quot;: &quot;10.0.19045.4291&quot;
+}</pre>
+      <p class='reference'><a href='https://learn.microsoft.com/mem/intune/protect/device-compliance-get-started' rel='noreferrer noopener' target='_blank'>Microsoft documentation</a></p>
+    </div>
+  </details>
+  <details class='finding sev-medium' data-severity='medium' data-search='cts-ipad-0022 no compliance policy applies to this device the device reports &#39;notapplicable&#39;, meaning no intune compliance policy targets it. it will never be reported as non-compliant, because nothing is evaluating it -- and a conditional access policy requiring compliance may still let it through. 00000000-0000-4000-d000-000000000302 devices'>
+    <summary>
+      <span class='pill sev-medium'>Medium</span>
+      <span class='object'>CTS-IPAD-0022</span>
+      <span class='headline'>No compliance policy applies to this device</span>
+    </summary>
+    <div class="body">
+      <p class='detail'>The device reports &#39;notApplicable&#39;, meaning no Intune compliance policy targets it. It will never be reported as non-compliant, because nothing is evaluating it -- and a Conditional Access policy requiring compliance may still let it through.</p>
+      <p class='recommendation'><strong>What to do</strong> Extend a compliance policy to cover this device&#39;s platform and group. Gaps in policy targeting are the most common reason a fleet looks compliant.</p>
+      <dl class="facts">
+        <div><dt>Object type</dt><dd>Device</dd></div>
+        <div><dt>Object ID</dt><dd class='mono'>00000000-0000-4000-d000-000000000302</dd></div>
+        <div><dt>Category</dt><dd>Devices</dd></div>
+      </dl>
+      <p class="evidence-label">Evidence</p>
+      <pre class='evidence'>{
+  &quot;assignedUser&quot;: &quot;dana.whitfield@contoso.example&quot;,
+  &quot;complianceState&quot;: &quot;notApplicable&quot;,
+  &quot;daysSinceSync&quot;: 6,
+  &quot;operatingSystem&quot;: &quot;iOS&quot;,
+  &quot;osVersion&quot;: &quot;17.4.1&quot;
+}</pre>
+      <p class='reference'><a href='https://learn.microsoft.com/mem/intune/protect/device-compliance-get-started' rel='noreferrer noopener' target='_blank'>Microsoft documentation</a></p>
+    </div>
+  </details>
+  <details class='finding sev-low' data-severity='low' data-search='cts-desktop-0090 compliant verdict is stale the device is recorded as compliant but last synchronised 118 day(s) ago, beyond the 30 day threshold. the verdict describes the device as it was then, not as it is now. 00000000-0000-4000-d000-000000000303 devices'>
+    <summary>
+      <span class='pill sev-low'>Low</span>
+      <span class='object'>CTS-DESKTOP-0090</span>
+      <span class='headline'>Compliant verdict is stale</span>
+    </summary>
+    <div class="body">
+      <p class='detail'>The device is recorded as compliant but last synchronised 118 day(s) ago, beyond the 30 day threshold. The verdict describes the device as it was then, not as it is now.</p>
+      <p class='recommendation'><strong>What to do</strong> Confirm the device is still in service. Retire records for devices that are gone so the compliance figures describe the real estate.</p>
+      <dl class="facts">
+        <div><dt>Object type</dt><dd>Device</dd></div>
+        <div><dt>Object ID</dt><dd class='mono'>00000000-0000-4000-d000-000000000303</dd></div>
+        <div><dt>Category</dt><dd>Devices</dd></div>
+      </dl>
+      <p class="evidence-label">Evidence</p>
+      <pre class='evidence'>{
+  &quot;complianceState&quot;: &quot;compliant&quot;,
+  &quot;daysSinceSync&quot;: 118,
+  &quot;isEncrypted&quot;: true,
+  &quot;operatingSystem&quot;: &quot;Windows&quot;,
+  &quot;osVersion&quot;: &quot;10.0.22631.3447&quot;
+}</pre>
+      <p class='reference'><a href='https://learn.microsoft.com/mem/intune/protect/device-compliance-get-started' rel='noreferrer noopener' target='_blank'>Microsoft documentation</a></p>
+    </div>
+  </details>
+</section>
+<footer>
+  <p>Produced by <strong>M365TenantHygiene</strong>, a read-only auditing module. No configuration in this tenant was changed to produce this report.</p>
+  <p class='params'>Parameters: inactivity threshold 90 days &middot; Global Administrator threshold 4.</p>
+</footer>
+</main>
+<script>
+(function () {
+  "use strict";
+
+  var findings = Array.prototype.slice.call(document.querySelectorAll(".finding"));
+  if (!findings.length) { return; }
+
+  var search  = document.getElementById("q");
+  var chips   = Array.prototype.slice.call(document.querySelectorAll("#sev-filters input"));
+  var counter = document.getElementById("shown");
+
+  function apply() {
+    var term = (search && search.value || "").trim().toLowerCase();
+    var allowed = {};
+    chips.forEach(function (c) { allowed[c.value] = c.checked; });
+
+    var shown = 0;
+    findings.forEach(function (el) {
+      var okSeverity = allowed[el.getAttribute("data-severity")] !== false;
+      var okTerm = !term || (el.getAttribute("data-search") || "").indexOf(term) !== -1;
+      var visible = okSeverity && okTerm;
+      el.hidden = !visible;
+      if (visible) { shown++; }
+    });
+
+    // Hide a check heading whose findings are all filtered out, so the report
+    // never shows a section header above nothing.
+    Array.prototype.slice.call(document.querySelectorAll(".check-heading")).forEach(function (h) {
+      var any = false, node = h.nextElementSibling;
+      while (node && node.classList && node.classList.contains("finding")) {
+        if (!node.hidden) { any = true; break; }
+        node = node.nextElementSibling;
+      }
+      h.hidden = !any;
+    });
+
+    if (counter) {
+      counter.textContent = shown === findings.length
+        ? findings.length + " findings"
+        : shown + " of " + findings.length + " findings";
+    }
+  }
+
+  if (search) { search.addEventListener("input", apply); }
+  chips.forEach(function (c) { c.addEventListener("change", apply); });
+
+  window.addEventListener("beforeprint", function () {
+    findings.forEach(function (el) { if (!el.hidden) { el.open = true; } });
+  });
+
+  apply();
+})();
+</script>
+</body>
+</html>

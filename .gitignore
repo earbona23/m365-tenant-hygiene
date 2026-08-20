@@ -1,0 +1,39 @@
+# Audit output. Reports contain real tenant data -- user principal names, device
+# names, application identifiers -- and must never be committed by accident.
+reports/
+out/
+*-report.html
+*-findings.csv
+*-checks.csv
+
+# ...except the synthetic sample rendered by samples/New-SampleReport.ps1, which
+# contains no real data and is referenced by the README.
+!docs/images/sample-report.html
+!docs/images/sample-findings.csv
+!docs/images/sample-checks.csv
+
+# Credentials and local configuration
+*.env
+.env
+settings.local.json
+*.pfx
+*.cer
+*.key
+tokencache*.bin
+
+# PowerShell
+*.psd1.bak
+publish/
+TestResults*.xml
+coverage.xml
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*~
+
+# Operating system
+.DS_Store
+Thumbs.db
+desktop.ini

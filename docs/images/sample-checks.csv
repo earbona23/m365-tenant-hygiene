@@ -1,0 +1,7 @@
+"CheckId","Check","Category","Status","ObjectsEvaluated","FindingCount","DurationSeconds","RequiredScopes","Reason","Error"
+"PrivilegedRole","Privileged role assignments","Privileged access","Completed","41","4","2.4","RoleManagement.Read.Directory","",""
+"MfaRegistration","Users without MFA","Identity","Completed","318","3","3.1","AuditLog.Read.All","",""
+"InactiveAccount","Inactive accounts","Identity","Completed","296","2","4.8","User.Read.All; AuditLog.Read.All","",""
+"RiskyApplication","Applications with high-risk permissions","Applications","Completed","63","3","5.6","Application.Read.All; Directory.Read.All","",""
+"MailForwarding","Inbox rules forwarding outside the tenant","Exchange Online","Skipped","0","0","1.2","MailboxSettings.Read; User.Read.All","Microsoft Graph refused access to all 296 mailbox(es) tried. With delegated permissions the module can only read mailboxes the signed-in user can already open; an administrative role does not by itself grant mailbox access. No conclusion about external forwarding can be drawn from this run.",""
+"DeviceCompliance","Non-compliant Intune devices","Devices","Completed","174","3","3.9","DeviceManagementManagedDevices.Read.All","",""
