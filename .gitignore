@@ -37,3 +37,7 @@ coverage.xml
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# License SIGNING key — never commit. Only the embedded public key ships.
+.secrets/
+*.sarif

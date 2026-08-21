@@ -22,7 +22,9 @@
     FunctionsToExport = @(
         'Connect-M365Hygiene'
         'Disconnect-M365Hygiene'
+        'Enable-M365HygienePro'
         'Export-M365HygieneReport'
+        'Get-M365HygieneLicense'
         'Get-M365HygieneCheck'
         'Invoke-M365HygieneAudit'
         'Test-M365HygienePermission'

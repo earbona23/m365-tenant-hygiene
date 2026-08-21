@@ -447,6 +447,24 @@ a conclusion.
 
 Both run in CI on every push and pull request.
 
+
+## Support the project 💜
+
+M365TenantHygiene is free and MIT-licensed, and everything that audits and reports stays free
+— all six checks, the HTML report, and both CSV exports. Two ways to keep it maintained:
+
+- **[Sponsor on GitHub](https://github.com/sponsors/earbona23)** or **[back it on Patreon](https://www.patreon.com/EduardArbona)** — any amount.
+- **[M365TenantHygiene Pro](docs/PRO.md)** — an offline, ECDSA-verified license (no account,
+  no telemetry) that unlocks the **SARIF export** (findings into GitHub code-scanning or a
+  SIEM) and baseline comparison. Built for teams and consultants who live in this module.
+
+```powershell
+Enable-M365HygienePro -LicenseKey 'M365HYGIENE-xxxxx.yyyyy'   # verified locally, nothing phones home
+Get-M365HygieneLicense
+```
+
+Nothing the module *audits* is behind the license — Pro is additive exports only.
+
 ## Licence
 
 [MIT](LICENSE).

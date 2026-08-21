@@ -54,7 +54,7 @@ function Export-M365HygieneReport {
 
         [string] $Prefix,
 
-        [ValidateSet('Html', 'Csv', 'All')]
+        [ValidateSet('Html', 'Csv', 'Sarif', 'All')]
         [string] $Format = 'All',
 
         [switch] $PassThru
@@ -136,6 +136,30 @@ function Export-M365HygieneReport {
                 @($checkRows) | Export-Csv -LiteralPath $checksPath -NoTypeInformation -Encoding utf8
                 $created.Add((Get-Item -LiteralPath $checksPath))
                 Write-HygieneLog -Level Information -Message "Coverage CSV written to $checksPath"
+            }
+        }
+
+        # --- SARIF (Pro) ----------------------------------------------------------
+        # Requested by name only; 'All' does not silently include it. Gated behind a Pro
+        # license -- the free tier already produces the HTML report and both CSVs.
+        if ($Format -eq 'Sarif') {
+            $ent = Get-HygieneEntitlement
+            if (-not ($ent.Pro -and $ent.Features -contains 'sarif')) {
+                Write-Warning (
+                    "The SARIF export needs an M365TenantHygiene Pro license. " +
+                    "Activate one with Enable-M365HygienePro, or see " +
+                    "https://github.com/earbona23/m365-tenant-hygiene#pro . " +
+                    "The HTML report and CSVs are free.")
+            }
+            else {
+                $sarifPath = Join-Path $directory.FullName "$Prefix.sarif"
+                if ($PSCmdlet.ShouldProcess($sarifPath, 'Write SARIF report')) {
+                    $sarif = ConvertTo-HygieneSarif -Audit $Audit
+                    $encoding = [System.Text.UTF8Encoding]::new($false)
+                    [System.IO.File]::WriteAllText($sarifPath, $sarif, $encoding)
+                    $created.Add((Get-Item -LiteralPath $sarifPath))
+                    Write-HygieneLog -Level Information -Message "SARIF report written to $sarifPath"
+                }
             }
         }
 
